@@ -44,7 +44,13 @@ public:
     uint32_t GetHeight() const { return m_height; }
 
     const GPUInfo& GetGPUInfo() const { return m_gpuInfo; }
+    bool ExportFormatSupportTable();
+
+    // Events
+    void OpenFileDialogue() { m_openFileDialogue = true; }
+    void SendFileSaveErrorEvent() { m_fileSaveError = true; }
     
+    const std::vector<const char*>& GetTableHeaders() const { return m_tableHeaders; }
     const std::unordered_map<DXGI_FORMAT, std::array<FormatSupport, SUPPORT_FLAGS_COUNT>>& GetSupportTable() const { return m_supportTable; }
 private:
     D3D_FEATURE_LEVEL FindHighestSupportedFLForDevice(ID3D12Device* device) const;
@@ -56,6 +62,7 @@ private:
     void CreateRenderTargets();
     void InitialiseImGui();
 
+    void HandleEvents();
     void BeginFrame();
     void EndFrame();
 
@@ -66,6 +73,10 @@ private:
 
     GPUInfo m_gpuInfo;
     ImGuiLayer m_imguiLayer;
+
+    bool m_fileSaveError : 1;
+    bool m_openFileDialogue : 1;
+    std::vector<const char*> m_tableHeaders;
     std::unordered_map<DXGI_FORMAT, std::array<FormatSupport, SUPPORT_FLAGS_COUNT>> m_supportTable;
     
     uint32_t m_width;

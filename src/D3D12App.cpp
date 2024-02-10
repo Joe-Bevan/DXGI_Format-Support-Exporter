@@ -8,6 +8,8 @@
 #include "../ImGui/backends/imgui_impl_dx12.h"
 #include "../ImGui/backends/imgui_impl_win32.h"
 
+#include <fstream>
+
 D3D12App::D3D12App(const uint32_t clientWidth, const uint32_t clientHeight)
     : m_width(clientWidth)
     , m_height(clientHeight)
@@ -18,6 +20,17 @@ D3D12App::D3D12App(const uint32_t clientWidth, const uint32_t clientHeight)
     , m_viewport{ 0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height) }
     , m_scissor{ 0u, 0u, static_cast<LONG>(m_width), static_cast<LONG>(m_height) }
 {
+    m_tableHeaders.reserve(9u);
+    m_tableHeaders.emplace_back("DXGI Format");
+    m_tableHeaders.emplace_back("Texture1D");
+    m_tableHeaders.emplace_back("Texture2D");
+    m_tableHeaders.emplace_back("Texture3D");
+    m_tableHeaders.emplace_back("Texture Cube");
+    m_tableHeaders.emplace_back("Render Target");
+    m_tableHeaders.emplace_back("Depth Target");
+    m_tableHeaders.emplace_back("Display");
+    m_tableHeaders.emplace_back("Mipmaps");
+
     m_imguiLayer.BindBackend(*this);
 }
 
@@ -41,6 +54,8 @@ void D3D12App::Shutdown()
 
 void D3D12App::BeginFrame()
 {
+    HandleEvents();
+
     // Reset command allocator. Must be done *after* the GPU is finished with it
     D3D_VERIFY(m_cmdAllocators[m_backBufferIdx]->Reset());
 
@@ -107,6 +122,37 @@ void D3D12App::OnResize(const uint32_t width, const uint32_t height, const bool 
 
         CreateRenderTargets();
     }
+}
+
+bool D3D12App::ExportFormatSupportTable()
+{
+    std::ofstream outFile("DXGI_Output.csv", std::ios::trunc | std::ios::out);
+    if (!outFile.is_open() || !outFile.good())
+        return false;
+
+    std::stringstream ss;
+    for (const char* tableHeader : m_tableHeaders)
+    {
+        ss << tableHeader << ',';
+    }
+    ss << '\n';
+
+    for (const auto& [format, supportFlags] : m_supportTable)
+    {
+        ss << D3DFormatToString(format) << ',';
+
+        for (const FormatSupport flag : supportFlags)
+        {
+            ss << FormatSupportEnumToString(flag) << ',';
+        }
+
+        ss << '\n';
+    }
+
+    outFile << ss.str().c_str();
+
+    outFile.close();
+    return true;
 }
 
 void D3D12App::EndFrame()
@@ -374,4 +420,39 @@ void D3D12App::InitialiseImGui()
         m_imGuiDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 
     ImGui::StyleColorsDark();
+}
+
+void D3D12App::HandleEvents()
+{
+    if (m_openFileDialogue)
+    {
+        m_openFileDialogue = false;
+
+        // Buffer to store filepath in
+        wchar_t szFileName[MAX_PATH] = { L"\0" };
+
+        OPENFILENAME ofn;
+        ZeroMemory(&ofn, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = Win32App::GetHandle();
+        ofn.lpstrFilter = L"Comma Seperated Value Files (*.csv)\0*.csv\0All Files (*.*)\0*.*\0";
+        ofn.lpstrFile = szFileName;
+        ofn.nMaxFile = MAX_PATH;
+        ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+        ofn.lpstrDefExt = L"csv";
+
+        if (GetOpenFileNameW(&ofn))
+        {
+            m_tableHeaders.clear();
+            m_supportTable.clear();
+
+            // TODO: something useful with the filename stored in szFileName 
+        }
+    }
+
+    if (m_fileSaveError)
+    {
+        m_fileSaveError = false;
+        MessageBoxW(NULL, L"File save error", L"Failed to save out DXGI format info to a '.csv' file", MB_OK | MB_ICONWARNING);
+    }
 }

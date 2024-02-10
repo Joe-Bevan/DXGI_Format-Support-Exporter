@@ -1,7 +1,6 @@
 #include "ImGuiLayer.h"
 #include "D3D12App.h"
 #include "Utils.h"
-
 #include <cstdint>
 
 #include "../ImGui/imgui.h"
@@ -12,17 +11,6 @@ ImGuiLayer::ImGuiLayer()
     : m_gfxBackend(nullptr)
     , m_onlyCommonFormats(false)
 {
-    m_tableHeaders.reserve(9u);
-    m_tableHeaders.emplace_back("DXGI Format");
-    m_tableHeaders.emplace_back("Texture1D");
-    m_tableHeaders.emplace_back("Texture2D");
-    m_tableHeaders.emplace_back("Texture3D");
-    m_tableHeaders.emplace_back("Texture Cube");
-    m_tableHeaders.emplace_back("Render Target");
-    m_tableHeaders.emplace_back("Depth Target");
-    m_tableHeaders.emplace_back("Display");
-    m_tableHeaders.emplace_back("Mipmaps");
-
     m_commonFormats.reserve(11u);
     m_commonFormats.emplace_back(DXGI_FORMAT_R8_UINT);
     m_commonFormats.emplace_back(DXGI_FORMAT_D16_UNORM);
@@ -50,7 +38,19 @@ void ImGuiLayer::CreateMenuBar()
 
     if (ImGui::BeginMenu("File"))
     {
-        ImGui::MenuItem("Export to text file");
+        if (ImGui::MenuItem("Export to .csv file"))
+        {
+            if (!m_gfxBackend->ExportFormatSupportTable())
+            {
+                m_gfxBackend->SendFileSaveErrorEvent();
+            }
+        }
+
+        if (ImGui::MenuItem("Import '.csv' file"))
+        {
+            m_gfxBackend->OpenFileDialogue();
+        }
+
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu("Config"))
@@ -80,13 +80,20 @@ void ImGuiLayer::CreateMainSupportTable()
     ImGui::Text("Shared memory: %.2f GB", BytesToGigbibytes(m_gfxBackend->GetGPUInfo().SharedSystemMemBytes));
     ImGui::Columns(1);
 
+    const std::vector<const char*> tableHeaders = m_gfxBackend->GetTableHeaders();
+    if (tableHeaders.empty())
+    {
+        ImGui::Text("No info loaded");
+        ImGui::End();
+        return;
+    }
     constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
-    ImGui::BeginTable("Formats", static_cast<int>(m_tableHeaders.size()), tableFlags);
+    ImGui::BeginTable("Formats", static_cast<int>(tableHeaders.size()), tableFlags);
 
     // Setup table header and freeze it 
     ImGui::TableSetupScrollFreeze(0, 1);
-    for (uint32_t column = 0; column < m_tableHeaders.size(); column++)
-        ImGui::TableSetupColumn(m_tableHeaders[column]);
+    for (uint32_t column = 0; column < tableHeaders.size(); column++)
+        ImGui::TableSetupColumn(tableHeaders[column]);
     ImGui::TableHeadersRow();
 
     // Main table render
@@ -110,7 +117,7 @@ void ImGuiLayer::CreateMainSupportTable()
         }
 
         ImGui::TableNextRow();
-        for (uint32_t column = 0; column < m_tableHeaders.size(); column++)
+        for (uint32_t column = 0; column < tableHeaders.size(); column++)
         {
             ImGui::TableSetColumnIndex(column);
             if (column == 0)

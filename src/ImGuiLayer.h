@@ -27,6 +27,6 @@ private:
 
     D3D12App* m_gfxBackend;
     bool m_onlyCommonFormats;
-    std::vector<const char*> m_tableHeaders;
+
     std::vector<DXGI_FORMAT> m_commonFormats;
 };

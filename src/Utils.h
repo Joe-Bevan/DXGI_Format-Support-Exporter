@@ -31,11 +31,21 @@ constexpr double BytesToGigbibytes(const uint64_t bytes)
 
 inline std::string UTF16toUTF8(const std::wstring& wideString)
 {
-    // Only suitable for windows platform, see below.
-    //https://stackoverflow.com/questions/42734715/how-can-i-convert-wstring-to-u16string
-    const std::u16string u16str(wideString.begin(), wideString.end()); 
-    std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> convert;
-    return convert.to_bytes(u16str);
+    if (wideString.empty())
+        return std::string{};
+
+    const int sizeRequired = WideCharToMultiByte(CP_UTF8, 0, wideString.c_str(), -1, NULL, 0, NULL, NULL);
+    if (sizeRequired <= 0)
+        return std::string{};
+
+    std::string utf8Str;
+    utf8Str.resize((size_t)sizeRequired);
+    const int convertedBytes = WideCharToMultiByte(CP_UTF8, 0, wideString.c_str(), -1, &utf8Str[0], (int)utf8Str.size(), NULL, NULL);
+
+    if (convertedBytes <= 0)
+        return std::string{};
+    else
+        return utf8Str;
 }
 
 inline const char* D3DFeatureLevelToString(const D3D_FEATURE_LEVEL FL)
@@ -54,6 +64,19 @@ inline const char* D3DFeatureLevelToString(const D3D_FEATURE_LEVEL FL)
     case D3D_FEATURE_LEVEL_12_1:     return "12_1";
     case D3D_FEATURE_LEVEL_12_2:     return "12_2";
     default: return "UNKNOWN FEATURE LEVEL";
+    }
+}
+
+inline const char* FormatSupportEnumToString(const FormatSupport support)
+{
+    switch (support)
+    {
+    case FormatSupport::FAIL: return "FAIL";
+    case FormatSupport::PASS: return "PASS";
+
+    case FormatSupport::UNKN:
+    default:
+        return "UNKNOWN";
     }
 }
 
