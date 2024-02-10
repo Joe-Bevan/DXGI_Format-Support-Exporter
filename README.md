@@ -12,7 +12,8 @@
 ![image](https://github.com/Joe-Bevan/DXGI_Format-Support-Exporter/assets/44583084/3b334e83-d687-45b7-9fc6-545101359363)
 
 ### TODO list:
-- [ ] Export formats and their support flags to a file along with other relevant GPU info (vendor, model, etc.)
+- [x] ~Export formats and their support flags to a file~
+    - [ ] Export additional relevant GPU info (vendor, model, etc.)
 - [ ] Open an exported list to view it easier than reading black and white plain text.  
 - [ ] Select a GPU from a list
 - [ ] Add/remove formats to the common DXGI formats list.
